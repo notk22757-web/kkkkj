@@ -244,84 +244,110 @@ function show(e,t,p){
 }
 let photoTimer = null;
 let currentPhoto = 0;
+let loadedPhotos = [];
 
 function showGallery(){
- document.getElementById('emo').textContent='🖼️';
- document.getElementById('ttl').textContent='Our Memories';
- document.getElementById('txt').textContent='A little place for our favourite moments. 💗';
- document.getElementById('photoGrid').style.display='block';
- document.getElementById('photoEmpty').style.display='block';
+  document.getElementById('emo').textContent='🖼️';
+  document.getElementById('ttl').textContent='Our Memories';
+  document.getElementById('txt').textContent='A little place for our favourite moments. 💗';
 
- const slides=document.getElementById('photoSlides');
- const dots=document.getElementById('photoDots');
- slides.innerHTML='';
- dots.innerHTML='';
+  const grid=document.getElementById('photoGrid');
+  const slides=document.getElementById('photoSlides');
+  const dots=document.getElementById('photoDots');
+  const empty=document.getElementById('photoEmpty');
 
- const photos=[
-   ['photo1.jpg','Our memory ♡'],
-   ['photo2.jpg','Another little moment ♡'],
-   ['photo3.jpg','A favourite memory ♡'],
-   ['photo4.jpg','Just us 💗']
- ];
+  grid.style.display='block';
+  empty.style.display='block';
+  slides.innerHTML='';
+  dots.innerHTML='';
+  clearInterval(photoTimer);
+  photoTimer=null;
+  currentPhoto=0;
+  loadedPhotos=[];
 
- photos.forEach((item,index)=>{
-   const slide=document.createElement('div');
-   slide.className='photoSlide';
-   if(index===0) slide.classList.add('active');
+  const files=['photo1.jpg','photo2.jpg','photo3.jpg','photo4.jpg'];
+  const captions=['Our memory ♡','Another little moment ♡','A favourite memory ♡','Just us 💗'];
 
-   const img=document.createElement('img');
-   img.src=item[0];
-   img.alt=item[1];
-   img.onerror=()=>{
-     slide.remove();
-     const dot=dots.querySelector(`[data-index="${index}"]`);
-     if(dot) dot.remove();
-     if(!slides.children.length){
-       document.getElementById('photoEmpty').innerHTML=
-         'Photos not found. Keep photo1.jpg, photo2.jpg, photo3.jpg and photo4.jpg beside index.html.';
-     }
-   };
+  files.forEach((file,index)=>{
+    const img=new Image();
 
-   const caption=document.createElement('div');
-   caption.className='photoCaption';
-   caption.textContent=item[1];
+    img.onload=()=>{
+      loadedPhotos.push({src:file,caption:captions[index],originalIndex:index});
+      loadedPhotos.sort((a,b)=>a.originalIndex-b.originalIndex);
 
-   slide.appendChild(img);
-   slide.appendChild(caption);
-   slides.appendChild(slide);
+      if(loadedPhotos.length===1){
+        buildPhotoSlides();
+      }else{
+        buildPhotoSlides();
+      }
+    };
 
-   const dot=document.createElement('button');
-   dot.className='photoDot';
-   if(index===0) dot.classList.add('active');
-   dot.dataset.index=index;
-   dot.onclick=()=>showPhoto(index);
-   dots.appendChild(dot);
- });
+    img.onerror=()=>{
+      console.warn('Could not load '+file);
+      if(index===files.length-1 && loadedPhotos.length===0){
+        empty.innerHTML='I could not find the photos. Make sure photo1.jpg, photo2.jpg, photo3.jpg and photo4.jpg are beside index.html.';
+      }
+    };
 
- currentPhoto=0;
- clearInterval(photoTimer);
+    img.src=file+'?v='+Date.now();
+  });
 
- if(photos.length>1){
-   photoTimer=setInterval(()=>{
-     const available=document.querySelectorAll('#photoSlides .photoSlide');
-     if(available.length>1){
-       currentPhoto=(currentPhoto+1)%available.length;
-       showPhoto(currentPhoto);
-     }
-   },4200);
- }
+  modal.classList.add('show');
+}
 
- modal.classList.add('show');
+function buildPhotoSlides(){
+  const slides=document.getElementById('photoSlides');
+  const dots=document.getElementById('photoDots');
+
+  slides.innerHTML='';
+  dots.innerHTML='';
+
+  loadedPhotos.forEach((photo,index)=>{
+    const slide=document.createElement('div');
+    slide.className='photoSlide'+(index===currentPhoto?' active':'');
+
+    const img=document.createElement('img');
+    img.src=photo.src+'?v='+Date.now();
+    img.alt=photo.caption;
+
+    const caption=document.createElement('div');
+    caption.className='photoCaption';
+    caption.textContent=photo.caption;
+
+    slide.appendChild(img);
+    slide.appendChild(caption);
+    slides.appendChild(slide);
+
+    const dot=document.createElement('button');
+    dot.className='photoDot'+(index===currentPhoto?' active':'');
+    dot.type='button';
+    dot.onclick=()=>showPhoto(index);
+    dots.appendChild(dot);
+  });
+
+  if(loadedPhotos.length>1){
+    clearInterval(photoTimer);
+    photoTimer=setInterval(()=>{
+      showPhoto((currentPhoto+1)%loadedPhotos.length);
+    },4200);
+  }
 }
 
 function showPhoto(index){
- const slides=document.querySelectorAll('#photoSlides .photoSlide');
- const dots=document.querySelectorAll('#photoDots .photoDot');
- if(!slides.length)return;
+  const slides=document.querySelectorAll('#photoSlides .photoSlide');
+  const dots=document.querySelectorAll('#photoDots .photoDot');
 
- currentPhoto=index%slides.length;
- slides.forEach((s,i)=>s.classList.toggle('active',i===currentPhoto));
- dots.forEach((d,i)=>d.classList.toggle('active',i===currentPhoto));
+  if(slides.length<2)return;
+
+  currentPhoto=index%slides.length;
+
+  slides.forEach((slide,i)=>{
+    slide.classList.toggle('active',i===currentPhoto);
+  });
+
+  dots.forEach((dot,i)=>{
+    dot.classList.toggle('active',i===currentPhoto);
+  });
 }
 
 function closeModal(){
